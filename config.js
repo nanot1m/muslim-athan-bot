@@ -1,5 +1,6 @@
 module.exports = {
   telegramBotApiToken: process.env.TELEGRAM_BOT_API_TOKEN || "",
   port: process.env.PORT || 4000,
-  appUrl: process.env.APP_URL || "https://<app-name>.herokuapp.com:443"
+  appUrl: process.env.APP_URL || "https://<app-name>.herokuapp.com:443",
+  timeCalculationMethod: parseInt(process.env.TIME_CALCULATION_METHOD) || 3
 };

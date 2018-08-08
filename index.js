@@ -23,7 +23,7 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-const aladhanService = new AladhanService();
+const aladhanService = new AladhanService(config.timeCalculationMethod);
 
 require("./handlers/start").startHandlerFactory(bot);
 require("./handlers/message").messageHandlerFactory(bot, aladhanService);
