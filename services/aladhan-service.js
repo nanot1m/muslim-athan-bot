@@ -36,13 +36,7 @@ exports.AladhanService = class AladhanService {
    * @returns {import('axios').AxiosPromise<AladhanResponse<AladhanTiming>>}
    */
   timings({ latitude, longitude }) {
-    const now = new Date();
-    const formattedDate = [
-      now.getDate(),
-      now.getMonth(),
-      now.getFullYear()
-    ].join("-");
-    return this.http.get(`v1/timings/${formattedDate}`, {
+    return this.http.get(`v1/timings`, {
       params: {
         latitude,
         longitude,
