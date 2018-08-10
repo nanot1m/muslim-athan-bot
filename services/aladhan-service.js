@@ -1,6 +1,6 @@
 // @ts-check
-
 const axios = require("axios").default;
+const { Timings } = require("./timings");
 
 const API_URL = "http://api.aladhan.com/";
 
@@ -17,11 +17,19 @@ const API_URL = "http://api.aladhan.com/";
  * @property {Object.<string, string>} timings
  */
 
-// http://api.aladhan.com/v1/timings/1398332113?latitude=51.508515&longitude=-0.1254872&method=2
+/**
+ * @typedef {import('./timings-provider').TimingsProvider} TimingsProvider
+ * @typedef {import('./geo-location').GeoLocation} GeoLocation
+ * @typedef {import('axios').AxiosPromise} AxiosPromise
+ */
+
 exports.AladhanService = class AladhanService {
   constructor(method = 2) {
     this.http = axios.create({ baseURL: API_URL });
     this.method = method;
+
+    /** @type {TimingsProvider} */
+    const inst = this;
   }
 
   /**
@@ -32,16 +40,49 @@ exports.AladhanService = class AladhanService {
   }
 
   /**
-   * @param {{latitude: number, longitude: number}} location
-   * @returns {import('axios').AxiosPromise<AladhanResponse<AladhanTiming>>}
+   * @param {GeoLocation} location
+   * @returns {Promise<Timings>}
    */
-  timings({ latitude, longitude }) {
-    return this.http.get(`v1/timings`, {
-      params: {
-        latitude,
-        longitude,
-        method: this.method
-      }
-    });
+  timingsByLocation({ latitude, longitude }) {
+    return this.http
+      .get(`v1/timings`, {
+        params: {
+          latitude,
+          longitude,
+          method: this.method
+        }
+      })
+      .then(x => aladhanResponseToTimings(x.data));
+  }
+
+  /**
+   * @param {string} city
+   * @returns {Promise<Timings>}
+   */
+  timingsByCity(city) {
+    return this.http
+      .get(`v1/timingsByCity`, {
+        params: {
+          city,
+          country: "Russia",
+          method: this.method
+        }
+      })
+      .then(x => aladhanResponseToTimings(x.data));
   }
 };
+
+/**
+ * @param {AladhanResponse<AladhanTiming>} response
+ */
+function aladhanResponseToTimings(response) {
+  const timings = response.data.timings;
+  return new Timings(
+    timings.Fajr,
+    timings.Dhuhr,
+    timings.Asr,
+    timings.Maghrib,
+    timings.Isha,
+    timings.Imsak
+  );
+}

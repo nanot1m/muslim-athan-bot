@@ -1,29 +1,45 @@
 // @ts-check
+
+/**
+ * @typedef  {import('../services/timings-provider').TimingsProvider} TimingsProvider
+ */
+
 /**
  * @param {import('node-telegram-bot-api')} bot
- * @param {import('../services/aladhan-service').AladhanService} aladhanService
+ * @param {TimingsProvider} timingsService
  */
-exports.messageHandlerFactory = (bot, aladhanService) => {
+exports.messageHandlerFactory = (bot, timingsService) => {
   bot.on("message", msg => {
     if (msg.location) {
-      handleLocation(bot, aladhanService, msg);
+      handleLocation(bot, timingsService, msg);
     }
+  });
+
+  bot.onText(/\/city\s?([a-zA-Zа-яА-Я\s]+)?/, (msg, match) => {
+    if (!match) {
+      return;
+    }
+    const city = match[1];
+    if (!city) {
+      handleNoCity(bot, msg);
+      return;
+    }
+    handleCity(bot, timingsService, msg, city);
   });
 };
 
 /**
  * @param {import('node-telegram-bot-api')} bot
- * @param {import('../services/aladhan-service').AladhanService} aladhanService
+ * @param {TimingsProvider} timingsService
  * @param {import('node-telegram-bot-api').Message} msg
  */
-async function handleLocation(bot, aladhanService, msg) {
+async function handleLocation(bot, timingsService, msg) {
   if (!msg.from || !msg.location) {
     return;
   }
   try {
-    const response = await aladhanService.timings(msg.location);
-    const timings = response.data.data.timings;
-    bot.sendMessage(msg.from.id, formatTimings(timings), {
+    const timings = await timingsService.timingsByLocation(msg.location);
+    bot.sendMessage(msg.from.id, timings.toMarkdownString(), {
       parse_mode: "Markdown"
     });
   } catch (ex) {
@@ -31,18 +47,37 @@ async function handleLocation(bot, aladhanService, msg) {
   }
 }
 
-const blacklist = {
-  Sunrise: true,
-  Sunset: true,
-  Midnight: true
-};
+/**
+ * @param {import('node-telegram-bot-api')} bot
+ * @param {TimingsProvider} timingsService
+ * @param {import('node-telegram-bot-api').Message} msg
+ * @param {string} city
+ */
+async function handleCity(bot, timingsService, msg, city) {
+  if (!msg.from) {
+    return;
+  }
+  try {
+    const timings = await timingsService.timingsByCity(city);
+    bot.sendMessage(msg.from.id, timings.toMarkdownString(), {
+      parse_mode: "Markdown"
+    });
+  } catch (ex) {
+    console.error(ex);
+  }
+}
 
 /**
- * @param {Object.<string, string>} timings
+ * @param {import('node-telegram-bot-api')} bot
+ * @param {import('node-telegram-bot-api').Message} msg
  */
-function formatTimings(timings) {
-  const entries = Object.entries(timings).filter(([key]) => !blacklist[key]);
-  return `
-${entries.map(([key, value]) => `*${key}:* ${value}`).join("\n")}
-`.trim();
+function handleNoCity(bot, msg) {
+  if (!msg.from) {
+    return;
+  }
+  bot.sendMessage(
+    msg.from.id,
+    "Нужно указать город, например: `/city Москва`",
+    { parse_mode: "Markdown" }
+  );
 }
